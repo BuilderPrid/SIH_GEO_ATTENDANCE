@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MyLogin extends StatefulWidget {
   const MyLogin({super.key});
@@ -8,8 +10,63 @@ class MyLogin extends StatefulWidget {
 }
 
 class _MyLoginState extends State<MyLogin> {
+  final String BASE_URL = "https://sihgeoattendance-production.up.railway.app/";
   final email = TextEditingController();
   final pass = TextEditingController();
+  // Function to show alert dialog
+  void showAlertDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // Close dialog
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> checkCredentialsAndRoute(BuildContext context) async {
+    final String apiUrl =
+        BASE_URL + 'users/login'; // Replace with actual login endpoint
+    final Map<String, dynamic> requestBody = {
+      "email": email.text, // Text from email controller
+      "password": pass.text, // Text from password controller
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        // Success
+        final responseData = jsonDecode(response.body);
+        print("Login Successful: ${responseData['message']}");
+        Navigator.pushNamed(context, 'map');
+        // Example: Navigate to dashboard or home screen
+        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage()));
+      } else if (response.statusCode == 401) {
+        // Unauthorized: Invalid credentials
+        showAlertDialog(context, "Login Failed", "Invalid email or password.");
+      } else {
+        // Other server errors
+        showAlertDialog(
+            context, "Error", "Something went wrong: ${response.body}");
+      }
+    } catch (error) {
+      // Network error or exception
+      showAlertDialog(context, "Network Error",
+          "Failed to connect to server. Please try again.");
+      print("Error during login: $error");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,8 +199,8 @@ class _MyLoginState extends State<MyLogin> {
                       shadowColor: Colors.black38,
                     ),
                     onPressed: () {
+                      checkCredentialsAndRoute(context);
                       // Ensure 'map' route is defined in your MaterialApp routes
-                      Navigator.pushNamed(context, 'map');
                     },
                     child: const Text(
                       'Log In',

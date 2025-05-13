@@ -1,16 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:uuid/uuid.dart';
 
 class MyRegister extends StatefulWidget {
   const MyRegister({super.key});
-
   @override
   _MyRegisterState createState() => _MyRegisterState();
 }
 
 class _MyRegisterState extends State<MyRegister> {
+  final String BASE_URL = "https://sihgeoattendance-production.up.railway.app/";
   final email = TextEditingController();
   final pass = TextEditingController();
   final name = TextEditingController();
+  Future<void> registerUser() async {
+    final String apiUrl =
+        BASE_URL + 'users/signup'; // Replace with actual API URL
+    final Map<String, dynamic> requestBody = {
+      "uuid": Uuid().v4(),
+      "email": email.text, // Get text from the controller
+      "name": name.text,
+      "password": pass.text,
+      "currentLocation": "Office A",
+      "workMode": "WFO",
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        // Success
+        final responseData = jsonDecode(response.body);
+        print("Registration Successful: ${responseData['message']}");
+      } else {
+        // Error
+        print("Failed: ${response.body}");
+      }
+    } catch (error) {
+      print("Error: $error");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +204,7 @@ class _MyRegisterState extends State<MyRegister> {
                   shadowColor: Colors.black38,
                 ),
                 onPressed: () {
+                  registerUser();
                   Navigator.pushNamed(context, 'login');
                 },
                 child: const Text(
