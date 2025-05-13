@@ -32,7 +32,7 @@ dependencies:
   flutter:
     sdk: flutter
     
-  google_maps_flutter: ^2.9.0
+  google_maps_flutter: ^2.12.1
   location: ^5.0.0
   flutter_polyline_points: ^2.1.0
   google_nav_bar: ^5.0.6
