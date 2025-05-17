@@ -1,8 +1,6 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { register, getAllUsers, getUserByUuid, updateUser, deleteUser, updateTimestamp, getTotalTime, loginUser} from '../controller/users.js';
 
-const prisma = new PrismaClient();
 const userRouter = Router();
 
 // Create a new user
