@@ -21,3 +21,11 @@ model User {
   entryTimes       Json       @default("{}")
   exitTimes        Json       @default("{}")
 }
+
+
+model Admin {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  email         String        @unique 
+  password      String
+}
