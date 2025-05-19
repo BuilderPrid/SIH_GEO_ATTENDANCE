@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Future<void> saveUserType(String uuid, String workMode) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('uuid', uuid);
+  await prefs.setString('workmode', workMode);
+}
 
 class MyLogin extends StatefulWidget {
   const MyLogin({super.key});
@@ -10,7 +17,7 @@ class MyLogin extends StatefulWidget {
 }
 
 class _MyLoginState extends State<MyLogin> {
-  final String BASE_URL = "https://sihgeoattendance-production.up.railway.app/";
+  final String BASE_URL = "http://localhost:3000/";
   final email = TextEditingController();
   final pass = TextEditingController();
   // Function to show alert dialog
@@ -48,6 +55,9 @@ class _MyLoginState extends State<MyLogin> {
       if (response.statusCode == 200) {
         // Success
         final responseData = jsonDecode(response.body);
+        print(responseData['user']);
+        saveUserType(
+            responseData['user']['uuid'], responseData['user']['workMode']);
         print("Login Successful: ${responseData['message']}");
         Navigator.pushNamed(context, 'map');
         // Example: Navigate to dashboard or home screen
