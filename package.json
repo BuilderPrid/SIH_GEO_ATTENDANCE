@@ -5,9 +5,15 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dev": "nodemon src/app.js"
   },
+ "jest": {
+  "transform": {
+    "^.+\\.jsx?$": "babel-jest"
+  }
+},
+
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -20,10 +26,17 @@
     "dotenv": "^16.5.0",
     "express": "^4.19.2",
     "mongodb": "^6.8.0",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "supertest": "^7.1.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.1",
+    "@babel/preset-env": "^7.27.2",
+    "@babel/preset-typescript": "^7.27.1",
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
+    "babel-jest": "^29.7.0",
+    "jest": "^29.7.0",
     "prisma": "^5.18.0"
   }
 }
