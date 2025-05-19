@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { PrismaClient } from '@prisma/client';
 
 import { differenceInMinutes, parse } from 'date-fns';
-
+import { haversine } from "./utils/haversvine.js";
 const prisma = new PrismaClient();
 
 // export const createUser = async(req,res)=>{
@@ -79,43 +79,45 @@ export const register = async (req, res) => {
 
 //LOGGING IN
 
-export const loginUser = async (req,res) =>{
-  try{
-      const {email,password} = req.body;
-      console.log(req.body,email,password);
-      const user = await prisma.user.findUnique({ where: { email: email } });
-      if(!user) return res.status(400).json({msg: "invalid credentials. "});
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email: email } });
+    if (!user) return res.status(400).json({ msg: "invalid credentials. " });
 
 
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ msg: "Invalid credentials. " });
-  
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials. " });
 
-      // const token = jwt.sign({ id : user._id} , process.env.JWT_SECRET);
-      // so that passsword doesnt get send back to frontend
-      delete user.password;
-      res.status(200).json({user: {
+
+    // const token = jwt.sign({ id : user._id} , process.env.JWT_SECRET);
+    // so that passsword doesnt get send back to frontend
+    delete user.password;
+    res.status(200).json({
+      user: {
         id: user.id,
         uuid: user.uuid,
         email: user.email,
         name: user.name,
         currentLocation: user.currentLocation,
-      }});
-      
+        workMode: user.workMode
+      }
+    });
+
   }
-  catch(err){
-      res.status(500).json({ error : err.message});
+  catch (err) {
+    res.status(500).json({ error: err.message });
   }
 }
 
 
-export const getAllUsers = async(req,res)=>{
-    const users = await prisma.user.findMany();
-    res.json(users);
+export const getAllUsers = async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
 };
 
-export const getUserByUuid = async(req,res)=>{
-    const { uuid } = req.params;
+export const getUserByUuid = async (req, res) => {
+  const { uuid } = req.params;
   const user = await prisma.user.findUnique({ where: { uuid } });
   if (user) {
     res.json(user);
@@ -124,9 +126,9 @@ export const getUserByUuid = async(req,res)=>{
   }
 };
 
-export const updateUser = async(req, res) => {
+export const updateUser = async (req, res) => {
 
-    const { uuid } = req.params;
+  const { uuid } = req.params;
   try {
     const user = await prisma.user.update({
       where: { uuid },
@@ -138,8 +140,8 @@ export const updateUser = async(req, res) => {
   }
 };
 
-export const deleteUser = async(req, res) => {
-    const { uuid } = req.params;
+export const deleteUser = async (req, res) => {
+  const { uuid } = req.params;
   try {
     await prisma.user.delete({ where: { uuid } });
     res.json({ message: 'User deleted successfully' });
@@ -217,8 +219,7 @@ export const deleteUser = async(req, res) => {
 
 export const updateTimestamp = async (req, res) => {
   const { uuid } = req.params;
-  const { currentTime, entered } = req.body;
-
+  const { currentTime, entered, latitude, longitude } = req.body;
   try {
     const user = await prisma.user.findUnique({
       where: { uuid },
@@ -255,6 +256,17 @@ export const updateTimestamp = async (req, res) => {
 
     // Different logic for WFO and WFH
     if (user.workMode === "WFO") {
+      // Geo-fence config — replace with dynamic values if needed
+      const distance = haversine(latitude, longitude, parseFloat(process.env.GEO_CENTER_LAT), parseFloat(process.env.GEO_CENTER_LON));
+      console.log(distance, latitude, longitude, process.env.GEO_CENTER_LAT, process.env.GEO_CENTER_LON, process.env.RADIUS_METERS);
+      if (entered === "true" && distance > parseInt(process.env.RADIUS_METERS)) {
+        return res.status(403).json({ error: "Outside geo-fence. Cannot check in." });
+      }
+
+      if (entered === "false" && distance <= parseInt(process.env.RADIUS_METERS)) {
+        return res.status(403).json({ error: "Still inside geo-fence. Cannot check out." });
+      }
+
       if (entered === "true") {
         updateData.inCount = {
           increment: 1,
@@ -358,70 +370,70 @@ export const updateTimestamp = async (req, res) => {
 
 // sharma edits => 
 
-  export const getTotalTime = async (req, res) => {
-    const { uuid, date } = req.params;
-  
-    try {
-      const user = await prisma.user.findUnique({
-        where: { uuid },
-      });
-  
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      const entryTimes = user.entryTimes && typeof user.entryTimes === 'object' ? user.entryTimes : JSON.parse(user.entryTimes || '{}');
-      const exitTimes = user.exitTimes && typeof user.exitTimes === 'object' ? user.exitTimes : JSON.parse(user.exitTimes || '{}');
-  
-      const entryTimesForDate = entryTimes[date] || [];
-      const exitTimesForDate = exitTimes[date] || [];
-  
-      if (entryTimesForDate.length === 0 || exitTimesForDate.length === 0) {
-        return res.status(400).json({ error: 'No entry or exit times found for this date' });
-      }
-  
-      let totalTime = 0;
-  
-      // WFO employees work time calculation (fixed shifts)
-      if (user.workMode === "WFO") {
-        for (let i = 0; i < Math.min(entryTimesForDate.length, exitTimesForDate.length); i++) {
-          const entryTime = new Date(`${date}T${entryTimesForDate[i]}`);
-          const exitTime = new Date(`${date}T${exitTimesForDate[i]}`);
-  
-          const timeSpent = differenceInMinutes(exitTime, entryTime);
-          totalTime += timeSpent;
-        }
-      }
-  
-      // WFH employees may have breaks in between
-      if (user.workMode === "WFH") {
-        for (let i = 0; i < entryTimesForDate.length; i++) {
-          const entryTime = new Date(`${date}T${entryTimesForDate[i]}`);
-          const exitTime = new Date(`${date}T${exitTimesForDate[i] || new Date().toISOString().split('T')[1]}`);
-  
-          const timeSpent = differenceInMinutes(exitTime, entryTime);
-          totalTime += timeSpent;
-        }
-      }
-  
-      const hoursSpent = totalTime / 60;
-  
-      let totalTimeIn = user.totalTimeIn && typeof user.totalTimeIn === 'object' ? user.totalTimeIn : JSON.parse(user.totalTimeIn || '{}');
-      totalTimeIn[date] = hoursSpent;
-  
-      await prisma.user.update({
-        where: { uuid },
-        data: {
-          totalTimeIn,
-        },
-      });
-  
-      res.json({ date, totalTime: hoursSpent });
-    } catch (error) {
-      console.error("Error calculating total time:", error);
-      res.status(500).json({ error: error.message });
+export const getTotalTime = async (req, res) => {
+  const { uuid, date } = req.params;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { uuid },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-  };
-  
+
+    const entryTimes = user.entryTimes && typeof user.entryTimes === 'object' ? user.entryTimes : JSON.parse(user.entryTimes || '{}');
+    const exitTimes = user.exitTimes && typeof user.exitTimes === 'object' ? user.exitTimes : JSON.parse(user.exitTimes || '{}');
+
+    const entryTimesForDate = entryTimes[date] || [];
+    const exitTimesForDate = exitTimes[date] || [];
+
+    if (entryTimesForDate.length === 0 || exitTimesForDate.length === 0) {
+      return res.status(400).json({ error: 'No entry or exit times found for this date' });
+    }
+
+    let totalTime = 0;
+
+    // WFO employees work time calculation (fixed shifts)
+    if (user.workMode === "WFO") {
+      for (let i = 0; i < Math.min(entryTimesForDate.length, exitTimesForDate.length); i++) {
+        const entryTime = new Date(`${date}T${entryTimesForDate[i]}`);
+        const exitTime = new Date(`${date}T${exitTimesForDate[i]}`);
+
+        const timeSpent = differenceInMinutes(exitTime, entryTime);
+        totalTime += timeSpent;
+      }
+    }
+
+    // WFH employees may have breaks in between
+    if (user.workMode === "WFH") {
+      for (let i = 0; i < entryTimesForDate.length; i++) {
+        const entryTime = new Date(`${date}T${entryTimesForDate[i]}`);
+        const exitTime = new Date(`${date}T${exitTimesForDate[i] || new Date().toISOString().split('T')[1]}`);
+
+        const timeSpent = differenceInMinutes(exitTime, entryTime);
+        totalTime += timeSpent;
+      }
+    }
+
+    const hoursSpent = totalTime / 60;
+
+    let totalTimeIn = user.totalTimeIn && typeof user.totalTimeIn === 'object' ? user.totalTimeIn : JSON.parse(user.totalTimeIn || '{}');
+    totalTimeIn[date] = hoursSpent;
+
+    await prisma.user.update({
+      where: { uuid },
+      data: {
+        totalTimeIn,
+      },
+    });
+
+    res.json({ date, totalTime: hoursSpent });
+  } catch (error) {
+    console.error("Error calculating total time:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 

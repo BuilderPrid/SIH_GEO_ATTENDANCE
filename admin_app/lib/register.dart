@@ -10,7 +10,7 @@ class MyRegister extends StatefulWidget {
 }
 
 class _MyRegisterState extends State<MyRegister> {
-  final String BASE_URL = "https://sihgeoattendance-production.up.railway.app/";
+  final String BASE_URL = "http://localhost:3000/";
   final email = TextEditingController();
   final pass = TextEditingController();
   final name = TextEditingController();
