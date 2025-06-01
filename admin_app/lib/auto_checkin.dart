@@ -15,8 +15,7 @@ class _LocationListenerWidgetState extends State<LocationListenerWidget> {
   StreamSubscription<Position>? _positionStream;
   bool isCheckedIn = false;
   String? uuid;
-  final String BASE_URL = "http://localhost:3000/";
-
+  final String BASE_URL = "https://sih-geo-attendance.onrender.com";
   // Define GeoFence center (latitude, longitude) and radius (meters)
   final double geoFenceLat = 30.3456;
   final double geoFenceLng = 78.0322;
@@ -104,7 +103,7 @@ class _LocationListenerWidgetState extends State<LocationListenerWidget> {
 
       // Send POST request
       final response = await http.post(
-        Uri.parse("http://localhost:3000/$uuid/timestamp"),
+        Uri.parse("$BASE_URL/users/$uuid/timestamp"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(payload),
       );
