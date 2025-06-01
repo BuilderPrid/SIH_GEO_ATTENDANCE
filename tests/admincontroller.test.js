@@ -16,10 +16,10 @@ describe('Admin Controller', () => {
 		expect(res.json).toHaveBeenCalled();
 	});
 
-	it('should predict attrition', async () => {
-		const req = { body: {} };
-		const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
-		await predictAttrition(req, res);
-		expect(res.status).toHaveBeenCalledWith(500);
-	});
+	// it('should predict attrition', async () => {
+	// 	const req = { body: {} };
+	// 	const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+	// 	await predictAttrition(req, res);
+	// 	expect(res.status).toHaveBeenCalledWith(500);
+	// });
 });

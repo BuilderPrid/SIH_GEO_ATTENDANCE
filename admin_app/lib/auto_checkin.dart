@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // for jsonEncode
 
 class LocationListenerWidget extends StatefulWidget {
   @override
@@ -10,6 +14,8 @@ class LocationListenerWidget extends StatefulWidget {
 class _LocationListenerWidgetState extends State<LocationListenerWidget> {
   StreamSubscription<Position>? _positionStream;
   bool isCheckedIn = false;
+  String? uuid;
+  final String BASE_URL = "http://localhost:3000/";
 
   // Define GeoFence center (latitude, longitude) and radius (meters)
   final double geoFenceLat = 30.3456;
@@ -20,6 +26,14 @@ class _LocationListenerWidgetState extends State<LocationListenerWidget> {
   void initState() {
     super.initState();
     _startListeningToLocation();
+    _loadSharedPrefs();
+  }
+
+  Future<void> _loadSharedPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      uuid = prefs.getString('uuid'); // This can still be null
+    });
   }
 
   void _startListeningToLocation() async {
@@ -65,18 +79,46 @@ class _LocationListenerWidgetState extends State<LocationListenerWidget> {
     print('Current Distance: $distance meters');
 
     if (distance <= geoFenceRadius && !isCheckedIn) {
-      _checkInUser();
+      _checkInUser(position);
     } else if (distance > geoFenceRadius && isCheckedIn) {
       _checkOutUser();
     }
   }
 
-  void _checkInUser() {
+  Future<void> _checkInUser(Position position) async {
     setState(() {
       isCheckedIn = true;
     });
     print('✅ Checked In');
     // TODO: Update server or local DB
+    try {
+      String timestamp = DateTime.now().toIso8601String();
+
+      // Prepare payload
+      Map<String, dynamic> payload = {
+        "entered": isCheckedIn,
+        "currentTime": timestamp,
+        "latitude": position.latitude,
+        "longitude": position.longitude,
+      };
+
+      // Send POST request
+      final response = await http.post(
+        Uri.parse("http://localhost:3000/$uuid/timestamp"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        print("✅ Check-in recorded successfully.");
+      } else {
+        print(
+            "❌ Failed to record check-in. Status code: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (e) {
+      print("❌ Error during check-in: $e");
+    }
   }
 
   void _checkOutUser() {

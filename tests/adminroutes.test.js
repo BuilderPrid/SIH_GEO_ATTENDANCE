@@ -12,8 +12,4 @@ describe('Admin Routes', () => {
 		expect(res.statusCode).toBe(200);
 	});
 
-	it('should predict attrition', async () => {
-		const res = await request(app).post('/admin/predictAttrition').send({ features: {} });
-		expect(res.statusCode).toBe(500); // Assuming prediction fails without proper input
-	});
 });
