@@ -14,6 +14,9 @@ class LocationListenerWidget extends StatefulWidget {
 class _LocationListenerWidgetState extends State<LocationListenerWidget> {
   StreamSubscription<Position>? _positionStream;
   bool isCheckedIn = false;
+  double curLat = -1.0;
+
+  double curLon = -1.0;
   String? uuid;
   final String BASE_URL = "https://sih-geo-attendance.onrender.com";
   // Define GeoFence center (latitude, longitude) and radius (meters)
@@ -86,6 +89,9 @@ class _LocationListenerWidgetState extends State<LocationListenerWidget> {
 
   Future<void> _checkInUser(Position position) async {
     setState(() {
+      curLon = position.longitude;
+
+      curLat = position.latitude;
       isCheckedIn = true;
     });
     print('✅ Checked In');
@@ -138,7 +144,9 @@ class _LocationListenerWidgetState extends State<LocationListenerWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Text(isCheckedIn ? "🟢 Inside GeoFence" : "🔴 Outside GeoFence"),
+        child: Text(isCheckedIn
+            ? "🟢 Inside GeoFence $curLon $curLat"
+            : "🔴 Outside GeoFence  $curLon $curLat"),
       ),
     );
   }

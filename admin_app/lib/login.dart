@@ -17,7 +17,7 @@ class MyLogin extends StatefulWidget {
 }
 
 class _MyLoginState extends State<MyLogin> {
-  final String BASE_URL = "https://sih-geo-attendance.onrender.com";
+  final String BASE_URL = "https://sih-geo-attendance.onrender.com/";
   final email = TextEditingController();
   final pass = TextEditingController();
   // Function to show alert dialog
